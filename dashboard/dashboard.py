@@ -1,92 +1,45 @@
 import os
 import pandas as pd
 import streamlit as st
-import matplotlib.pyplot as plt
-import seaborn as sns
 import plotly.express as px
-from babel.numbers import format_currency
 
 # Konfigurasi Streamlit
 st.set_page_config(page_title="Dashboard Analisis Data E-Commerce", layout="wide")
 
-# **Pastikan path dataset benar**
-DATA_DIR = "../data/"  # Semua dataset CSV ada di folder `data`
-DASHBOARD_DIR = "./"  # `dashboard.py` dan `all_data.csv` ada di folder `dashboard/`
-
-DATASETS = {
-    "orders": "orders_dataset.csv",
-    "order_items": "order_items_dataset.csv",
-    "order_payments": "order_payments_dataset.csv",
-    "order_reviews": "order_reviews_dataset.csv",
-    "customers": "customers_dataset.csv",
-    "geolocation": "geolocation_dataset.csv",
-    "sellers": "sellers_dataset.csv",
-    "products": "products_dataset.csv",
-    "category_translation": "product_category_name_translation.csv"
-}
-
-# **Fungsi untuk memuat semua dataset**
+# Fungsi untuk memuat data
 @st.cache_data
 def load_data():
-    data = {}
-    for key, filename in DATASETS.items():
-        file_path = os.path.join(DATA_DIR, filename)
-        if not os.path.exists(file_path):
-            st.error(f"❌ File {file_path} tidak ditemukan! Harap letakkan file di direktori yang benar.")
-            return None
-        data[key] = pd.read_csv(file_path)
-    
-    # **Load all_data.csv dari folder `dashboard/`**
-    all_data_path = os.path.join(DASHBOARD_DIR, "all_data.csv")
-    if os.path.exists(all_data_path):
-        data["all_data"] = pd.read_csv(all_data_path)
-    else:
-        st.error(f"❌ File {all_data_path} tidak ditemukan! Harap letakkan file di direktori yang benar.")
+    file_path = "dashboard/all_data.csv"
+
+    if not os.path.exists(file_path):
+        st.error(f"File {file_path} tidak ditemukan! Harap unggah atau letakkan file di direktori yang benar.")
         return None
 
-    return data
+    df = pd.read_csv(file_path, parse_dates=["order_purchase_timestamp", "order_delivered_customer_date"])
 
-# **Load semua dataset**
-data = load_data()
-if data is None:
-    st.stop()  # Hentikan Streamlit jika file tidak ditemukan
+    # Menghitung waktu pengiriman dalam hari
+    df["delivery_time"] = (df["order_delivered_customer_date"] - df["order_purchase_timestamp"]).dt.days
 
-# **Gabungkan Data**
-orders = data["orders"]
-order_items = data["order_items"]
-order_payments = data["order_payments"]
-order_reviews = data["order_reviews"]
-customers = data["customers"]
-geolocation = data["geolocation"]
-sellers = data["sellers"]
-products = data["products"]
-category_translation = data["category_translation"]
-all_data = data["all_data"]
+    # Mengubah format bulan agar bisa divisualisasikan tanpa error JSON serializable
+    df["bulan"] = df["order_purchase_timestamp"].dt.to_period("M").astype(str)
 
-# **Konversi tipe data**
-orders["order_purchase_timestamp"] = pd.to_datetime(orders["order_purchase_timestamp"])
-orders["order_delivered_customer_date"] = pd.to_datetime(orders["order_delivered_customer_date"])
-orders["bulan"] = orders["order_purchase_timestamp"].dt.to_period("M").astype(str)
+    return df
 
-# **Gabungkan data order dengan pelanggan**
-df = orders.merge(customers, on="customer_id", how="left")
-df = df.merge(order_items, on="order_id", how="left")
-df = df.merge(products, on="product_id", how="left")
-df = df.merge(order_payments, on="order_id", how="left")
+# Memuat data
+df = load_data()
+if df is None:
+    st.stop()  # Hentikan eksekusi Streamlit jika file tidak ditemukan
 
-# **Menghitung waktu pengiriman dalam hari**
-df["delivery_time"] = (df["order_delivered_customer_date"] - df["order_purchase_timestamp"]).dt.days
-
-# **Sidebar - Filter Waktu**
-st.sidebar.header("📅 Filter Data")
+# Sidebar Filter
+st.sidebar.header("Filter Data")
 min_date, max_date = df["order_purchase_timestamp"].min(), df["order_purchase_timestamp"].max()
 start_date, end_date = st.sidebar.date_input("Pilih Rentang Waktu:", [min_date, max_date], min_value=min_date, max_value=max_date)
 
-# **Filter Data berdasarkan tanggal**
+# Filter Data berdasarkan tanggal
 filtered_df = df[(df["order_purchase_timestamp"] >= pd.to_datetime(start_date)) & 
                  (df["order_purchase_timestamp"] <= pd.to_datetime(end_date))]
 
-# **Dashboard Header**
+# Dashboard Header
 st.title("📊 Dashboard Analisis Data E-Commerce")
 st.markdown("---")
 
@@ -126,9 +79,18 @@ with col2:
                        color=top_states.values, color_continuous_scale="Greens")
     st.plotly_chart(fig_state, use_container_width=True)
 
-### **4. Tren Penjualan**
+### **4. Rata-rata Waktu Pengiriman per Kategori Produk**
+st.subheader("🚚 Rata-rata Waktu Pengiriman per Kategori Produk")
+delivery_time_per_category = df.groupby('product_category_name')['delivery_time'].mean().reset_index().sort_values(by='delivery_time')
+fig_delivery = px.bar(delivery_time_per_category, x='delivery_time', y='product_category_name', orientation='h', 
+                      labels={'delivery_time': 'Hari', 'product_category_name': 'Kategori Produk'}, 
+                      title="Waktu Pengiriman per Kategori Produk", color='delivery_time', 
+                      color_continuous_scale="Oranges")
+st.plotly_chart(fig_delivery, use_container_width=True)
+
+### **5. Tren Penjualan**
 st.subheader("📈 Tren Penjualan")
-filtered_df["bulan"] = filtered_df["order_purchase_timestamp"].dt.to_period("M").astype(str)
+filtered_df["bulan"] = filtered_df["order_purchase_timestamp"].dt.to_period("M").astype(str)  # Pastikan format string
 penjualan_per_bulan = filtered_df.groupby("bulan")["price"].sum().reset_index()
 fig_sales = px.line(penjualan_per_bulan, x="bulan", y="price", markers=True, 
                     labels={'bulan': 'Bulan', 'price': 'Total Penjualan'}, 
