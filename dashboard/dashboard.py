@@ -1,7 +1,5 @@
 import os
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import streamlit as st
 import plotly.express as px
 
@@ -11,20 +9,20 @@ st.set_page_config(page_title="Dashboard Analisis Data E-Commerce", layout="wide
 # Fungsi untuk memuat data
 @st.cache_data
 def load_data():
-    file_path = "dashboard/all_data.csv"
-    
+    file_path = "all_data.csv"
+
     if not os.path.exists(file_path):
         st.error(f"File {file_path} tidak ditemukan! Harap unggah atau letakkan file di direktori yang benar.")
         return None
-    
+
     df = pd.read_csv(file_path, parse_dates=["order_purchase_timestamp", "order_delivered_customer_date"])
-    
+
     # Menghitung waktu pengiriman dalam hari
     df["delivery_time"] = (df["order_delivered_customer_date"] - df["order_purchase_timestamp"]).dt.days
-    
+
     # Mengubah format bulan agar bisa divisualisasikan tanpa error JSON serializable
     df["bulan"] = df["order_purchase_timestamp"].dt.to_period("M").astype(str)
-    
+
     return df
 
 # Memuat data
@@ -92,6 +90,7 @@ st.plotly_chart(fig_delivery, use_container_width=True)
 
 ### **5. Tren Penjualan**
 st.subheader("📈 Tren Penjualan")
+filtered_df["bulan"] = filtered_df["order_purchase_timestamp"].dt.to_period("M").astype(str)  # Pastikan format string
 penjualan_per_bulan = filtered_df.groupby("bulan")["price"].sum().reset_index()
 fig_sales = px.line(penjualan_per_bulan, x="bulan", y="price", markers=True, 
                     labels={'bulan': 'Bulan', 'price': 'Total Penjualan'}, 
@@ -100,4 +99,4 @@ st.plotly_chart(fig_sales, use_container_width=True)
 
 ### **Footer**
 st.sidebar.markdown("---")
-st.sidebar.write("👨‍💻 Powered by: Azmi")
+st.sidebar.write("👨‍💻 Powered by: Azmi Irfala | A163YAF089@devacademy.id")
