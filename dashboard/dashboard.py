@@ -11,7 +11,7 @@ st.set_page_config(page_title="Dashboard Analisis Data E-Commerce", layout="wide
 # Fungsi untuk memuat data
 @st.cache_data
 def load_data():
-    file_path = "all_data.csv"
+    file_path = "/dashboard/all_data.csv"
     
     if not os.path.exists(file_path):
         st.error(f"File {file_path} tidak ditemukan! Harap unggah atau letakkan file di direktori yang benar.")
