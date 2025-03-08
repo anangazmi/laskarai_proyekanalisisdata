@@ -15,7 +15,7 @@ st.set_page_config(page_title="Dashboard Analisis Data E-Commerce", layout="wide
 def load_data():
     df = pd.read_csv("all_data.csv", parse_dates=["order_purchase_timestamp", "order_delivered_customer_date"])
     df["delivery_time"] = (df["order_delivered_customer_date"] - df["order_purchase_timestamp"]).dt.days
-    df["bulan"] = df["order_purchase_timestamp"].dt.to_period("M")
+    df["bulan"] = df["order_purchase_timestamp"].dt.strftime('%Y-%m')  # Ubah Period ke String
     return df
 
 df = load_data()
@@ -26,7 +26,7 @@ min_date, max_date = df["order_purchase_timestamp"].min(), df["order_purchase_ti
 start_date, end_date = st.sidebar.date_input("📅 Pilih Rentang Waktu:", [min_date, max_date], min_value=min_date, max_value=max_date)
 
 # Filter Data
-df_filtered = df[(df["order_purchase_timestamp"] >= str(start_date)) & (df["order_purchase_timestamp"] <= str(end_date))]
+df_filtered = df[(df["order_purchase_timestamp"] >= pd.to_datetime(start_date)) & (df["order_purchase_timestamp"] <= pd.to_datetime(end_date))]
 
 # Header Dashboard
 st.title("📊 Dashboard Analisis Data E-Commerce")
@@ -78,16 +78,11 @@ fig_delivery = px.bar(delivery_time_per_category, x='delivery_time', y='product_
                       color='delivery_time', color_continuous_scale="Oranges")
 st.plotly_chart(fig_delivery, use_container_width=True)
 
-# Filter data berdasarkan rentang waktu yang dipilih
-filtered_df = df[(df["order_purchase_timestamp"] >= pd.to_datetime(start_date)) & 
-                     (df["order_purchase_timestamp"] <= pd.to_datetime(end_date))]
-
 # 📌 **5. Tren Penjualan**
-# Membuat format bulan
-filtered_df["bulan"] = filtered_df["order_purchase_timestamp"].dt.to_period("M").astype(str)
+st.subheader("📈 Tren Penjualan per Bulan")
 
 # Mengelompokkan data berdasarkan bulan dan menghitung total penjualan
-penjualan_per_bulan = filtered_df.groupby("bulan")["price"].sum().reset_index()
+penjualan_per_bulan = df_filtered.groupby("bulan")["price"].sum().reset_index()
 
 # Membuat visualisasi dengan Plotly
 fig_sales = px.line(penjualan_per_bulan, x="bulan", y="price", markers=True, 
