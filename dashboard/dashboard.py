@@ -1,37 +1,43 @@
 import os
 import pandas as pd
 import streamlit as st
+import matplotlib.pyplot as plt
+import seaborn as sns
 import plotly.express as px
+from babel.numbers import format_currency
 
 # Konfigurasi Streamlit
 st.set_page_config(page_title="Dashboard Analisis Data E-Commerce", layout="wide")
 
+# Pastikan path data
+DATA_DIR = "./"  # Ubah jika file ada dalam folder tertentu
+FILE_NAME = "all_data.csv"
+file_path = os.path.join(DATA_DIR, FILE_NAME)
+
 # Fungsi untuk memuat data
 @st.cache_data
 def load_data():
-    file_path = "dashboard/all_data.csv"
-
     if not os.path.exists(file_path):
-        st.error(f"File {file_path} tidak ditemukan! Harap unggah atau letakkan file di direktori yang benar.")
+        st.error(f"❌ File {file_path} tidak ditemukan! Harap letakkan file di direktori yang benar.")
         return None
 
     df = pd.read_csv(file_path, parse_dates=["order_purchase_timestamp", "order_delivered_customer_date"])
-
+    
     # Menghitung waktu pengiriman dalam hari
     df["delivery_time"] = (df["order_delivered_customer_date"] - df["order_purchase_timestamp"]).dt.days
 
-    # Mengubah format bulan agar bisa divisualisasikan tanpa error JSON serializable
+    # Konversi format bulan agar bisa divisualisasikan tanpa error JSON serializable
     df["bulan"] = df["order_purchase_timestamp"].dt.to_period("M").astype(str)
 
     return df
 
-# Memuat data
+# Load dataset
 df = load_data()
 if df is None:
-    st.stop()  # Hentikan eksekusi Streamlit jika file tidak ditemukan
+    st.stop()  # Hentikan Streamlit jika file tidak ditemukan
 
-# Sidebar Filter
-st.sidebar.header("Filter Data")
+# Sidebar - Filter Waktu
+st.sidebar.header("📅 Filter Data")
 min_date, max_date = df["order_purchase_timestamp"].min(), df["order_purchase_timestamp"].max()
 start_date, end_date = st.sidebar.date_input("Pilih Rentang Waktu:", [min_date, max_date], min_value=min_date, max_value=max_date)
 
@@ -39,7 +45,7 @@ start_date, end_date = st.sidebar.date_input("Pilih Rentang Waktu:", [min_date, 
 filtered_df = df[(df["order_purchase_timestamp"] >= pd.to_datetime(start_date)) & 
                  (df["order_purchase_timestamp"] <= pd.to_datetime(end_date))]
 
-# Dashboard Header
+# **Dashboard Header**
 st.title("📊 Dashboard Analisis Data E-Commerce")
 st.markdown("---")
 
@@ -99,4 +105,4 @@ st.plotly_chart(fig_sales, use_container_width=True)
 
 ### **Footer**
 st.sidebar.markdown("---")
-st.sidebar.write("👨‍💻 Powered by: Azmi Irfala | A163YAF089@devacademy.id")
+st.sidebar.write("👨‍💻 Powered by: Azmi")
