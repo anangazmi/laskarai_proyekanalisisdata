@@ -10,7 +10,7 @@ from babel.numbers import format_currency
 st.set_page_config(page_title="Dashboard Analisis Data E-Commerce", layout="wide")
 
 # Pastikan path data
-DATA_DIR = "./"  # Ubah jika file ada dalam folder tertentu
+DATA_DIR = "dashboard"  # Ubah jika file ada dalam folder tertentu
 FILE_NAME = "all_data.csv"
 file_path = os.path.join(DATA_DIR, FILE_NAME)
 
