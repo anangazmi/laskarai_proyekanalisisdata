@@ -2,9 +2,6 @@ import os
 import pandas as pd
 import streamlit as st
 import plotly.express as px
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 # Konfigurasi Streamlit
 st.set_page_config(page_title="Dashboard Analisis Data E-Commerce", layout="wide")
